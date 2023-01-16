@@ -2,18 +2,17 @@ pipeline {
 
     agent any
 /*
-	tools {
+    tools {
         maven "maven3"
-        jdk"oracleJDK8
     }
 */
     environment {
-        registry = "Kebeayo/vproappdock"
+        registry = "kebeayo/vproappdock"
         registryCredential = "dockerhub"
-
     }
 
     stages{
+
         stage('BUILD'){
             steps {
                 sh 'mvn clean install -DskipTests'
@@ -72,35 +71,41 @@ pipeline {
                 }
             }
         }
-        stage('Build App Image') {
-              steps {
-                 script {
-                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"
-                 }
-              }
 
+        stage('Build Docker App Image') {
+            steps {
+                script {
+                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"
+                }
+            }
         }
-        stage('upload Image'){
-           steps{
-              scripts {
-                 docker.withRegistry('', registryCredential) {
-                    dockerImage.push("V$BUILD_NUMBER")
-                    dockerImage.push('latest')
-                 }
-              }
-           }
+
+        stage('Upload image to Dockerhub') {
+            steps {
+                script {
+                    docker.withRegistry('', registryCredential) {
+                        dockerImage.push("V$BUILD_NUMBER")
+                        dockerImage.push('latest')
+                    }
+                }
+            }
         }
-        stage('Remove Unused docker image') {
-           steps{
-               sh "docker rmi $registry:V$BUILD_NUMBER"
-           }
+
+        stage('Remove Unused Docker image') {
+            steps {
+                sh "docker rmi $registry:V$BUILD_NUMBER"
+            }
         }
-        stage('kubernetes Deploy') {
-           agent {label 'KOPS'}
-              steps {
-                 sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
-              }
+
+        stage('Kubernetes Deploy') {
+            agent {label 'KOPS'}
+                steps {
+                    sh "helm upgrade --install --force vprofile-stack helm/vprofilecharts --set appimage=${registry}:V${BUILD_NUMBER} --namespace prod"
+                }
         }
+
+
+
     }
 
 
