@@ -4,6 +4,7 @@ pipeline {
 /*
 	tools {
         maven "maven3"
+        jdk"oracleJDK8
     }
 */
     environment {
